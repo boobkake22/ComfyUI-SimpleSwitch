@@ -4,7 +4,7 @@ ComfyUI custom node that returns the first available value from six optional wil
 
 ## What it does
 
-- Accepts six optional inputs: `value_1` ... `value_6`
+- Accepts six optional inputs: `input01` ... `input06`
 - Returns the first non-empty input in order
 - Preserves original behavior for empty model/clip context dictionaries
 - Uses wildcard typing so it can pass through most ComfyUI value types
@@ -31,8 +31,8 @@ Restart ComfyUI after installing.
 
 ## Usage
 
-1. Add the `Simple Switch (6 Inputs)` node.
-2. Connect values to `value_1` ... `value_6` in your preferred priority order.
+1. Add the `SimpleSwitch` node.
+2. Connect values to `input01` ... `input06` in your preferred priority order.
 3. Use `output` downstream.
 
 ## License

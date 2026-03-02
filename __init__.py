@@ -1,11 +1,11 @@
-from .simple_switch import SimpleAnySwitch
+from .simple_switch import SimpleSwitch
 
 NODE_CLASS_MAPPINGS = {
-    "SimpleAnySwitch": SimpleAnySwitch,
+    "SimpleSwitch": SimpleSwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "SimpleAnySwitch": "Simple Switch (6 Inputs)",
+    "SimpleSwitch": "Simple Switch (6 Inputs)",
 }
 
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]

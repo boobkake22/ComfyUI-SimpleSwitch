@@ -27,8 +27,8 @@ def _is_none(value):
     return value is None
 
 
-class SimpleAnySwitch:
-    """Return the first non-empty value from value_1..value_6."""
+class SimpleSwitch:
+    """Return the first non-empty value from input01..input06."""
 
     CATEGORY = "Simple Switch"
     FUNCTION = "switch"
@@ -40,25 +40,25 @@ class SimpleAnySwitch:
         return {
             "required": {},
             "optional": {
-                "value_1": (ANY_TYPE,),
-                "value_2": (ANY_TYPE,),
-                "value_3": (ANY_TYPE,),
-                "value_4": (ANY_TYPE,),
-                "value_5": (ANY_TYPE,),
-                "value_6": (ANY_TYPE,),
+                "input01": (ANY_TYPE,),
+                "input02": (ANY_TYPE,),
+                "input03": (ANY_TYPE,),
+                "input04": (ANY_TYPE,),
+                "input05": (ANY_TYPE,),
+                "input06": (ANY_TYPE,),
             },
         }
 
     def switch(
         self,
-        value_1=None,
-        value_2=None,
-        value_3=None,
-        value_4=None,
-        value_5=None,
-        value_6=None,
+        input01=None,
+        input02=None,
+        input03=None,
+        input04=None,
+        input05=None,
+        input06=None,
     ):
-        for candidate in (value_1, value_2, value_3, value_4, value_5, value_6):
+        for candidate in (input01, input02, input03, input04, input05, input06):
             if not _is_none(candidate):
                 return (candidate,)
         return (None,)
