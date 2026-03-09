@@ -14,6 +14,7 @@ class AnyType(str):
 
 
 ANY_TYPE = AnyType("*")
+LATENT_TYPE = "LATENT"
 
 
 def _is_context_empty(ctx):
@@ -25,6 +26,53 @@ def _is_none(value):
         if isinstance(value, dict) and "model" in value and "clip" in value:
             return _is_context_empty(value)
     return value is None
+
+
+def _get_latent_samples(value):
+    if not isinstance(value, dict):
+        return None
+    return value.get("samples")
+
+
+def _is_nested_tensor(value):
+    return bool(getattr(value, "is_nested", False))
+
+
+def _is_audio_latent(value):
+    if not isinstance(value, dict):
+        return False
+
+    samples = _get_latent_samples(value)
+    if samples is None:
+        return False
+
+    if value.get("type") == "audio":
+        return True
+
+    # LTX AV latents are valid for audio decode because the decoder unwraps the
+    # nested container and selects the audio branch internally.
+    if _is_nested_tensor(samples):
+        return True
+
+    return "sample_rate" in value and getattr(samples, "ndim", None) == 4
+
+
+def _describe_audio_latent(value, index):
+    if not isinstance(value, dict):
+        return f"input{index:02d}=non-latent:{type(value).__name__}"
+
+    samples = _get_latent_samples(value)
+    if samples is None:
+        return f"input{index:02d}=latent-without-samples"
+
+    shape = getattr(samples, "shape", None)
+    ndim = getattr(samples, "ndim", None)
+    latent_type = value.get("type", "unknown")
+    nested = _is_nested_tensor(samples)
+    return (
+        f"input{index:02d}=type:{latent_type},nested:{nested},"
+        f"ndim:{ndim},shape:{tuple(shape) if shape is not None else 'unknown'}"
+    )
 
 
 class SimpleSwitch:
@@ -61,4 +109,58 @@ class SimpleSwitch:
         for candidate in (input01, input02, input03, input04, input05, input06):
             if not _is_none(candidate):
                 return (candidate,)
+        return (None,)
+
+
+class SimpleAudioLatentSwitch:
+    """Return the first non-empty audio-compatible latent from input01..input06."""
+
+    CATEGORY = "Simple Switch"
+    FUNCTION = "switch"
+    RETURN_TYPES = (LATENT_TYPE,)
+    RETURN_NAMES = ("output",)
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {},
+            "optional": {
+                "input01": (LATENT_TYPE,),
+                "input02": (LATENT_TYPE,),
+                "input03": (LATENT_TYPE,),
+                "input04": (LATENT_TYPE,),
+                "input05": (LATENT_TYPE,),
+                "input06": (LATENT_TYPE,),
+            },
+        }
+
+    def switch(
+        self,
+        input01=None,
+        input02=None,
+        input03=None,
+        input04=None,
+        input05=None,
+        input06=None,
+    ):
+        rejected = []
+        for index, candidate in enumerate(
+            (input01, input02, input03, input04, input05, input06),
+            start=1,
+        ):
+            if _is_none(candidate):
+                continue
+
+            if _is_audio_latent(candidate):
+                return (candidate,)
+
+            rejected.append(_describe_audio_latent(candidate, index))
+
+        if rejected:
+            raise ValueError(
+                "No compatible audio latent found. "
+                "Expected an LTX audio latent (`type='audio'`) or a nested AV latent. "
+                f"Rejected candidates: {', '.join(rejected)}"
+            )
+
         return (None,)
