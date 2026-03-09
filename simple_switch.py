@@ -38,6 +38,14 @@ def _is_nested_tensor(value):
     return bool(getattr(value, "is_nested", False))
 
 
+def _get_samples_ndim(samples):
+    return getattr(samples, "ndim", None)
+
+
+def _is_latent(value):
+    return _get_latent_samples(value) is not None
+
+
 def _is_audio_latent(value):
     if not isinstance(value, dict):
         return False
@@ -46,15 +54,19 @@ def _is_audio_latent(value):
     if samples is None:
         return False
 
-    if value.get("type") == "audio":
-        return True
-
     # LTX AV latents are valid for audio decode because the decoder unwraps the
     # nested container and selects the audio branch internally.
     if _is_nested_tensor(samples):
         return True
 
-    return "sample_rate" in value and getattr(samples, "ndim", None) == 4
+    ndim = _get_samples_ndim(samples)
+    if ndim != 4:
+        return False
+
+    if value.get("type") == "audio":
+        return True
+
+    return "sample_rate" in value
 
 
 def _describe_audio_latent(value, index):
@@ -109,6 +121,44 @@ class SimpleSwitch:
         for candidate in (input01, input02, input03, input04, input05, input06):
             if not _is_none(candidate):
                 return (candidate,)
+        return (None,)
+
+
+class SimpleLatentSwitch:
+    """Return the first non-empty latent from input01..input06."""
+
+    CATEGORY = "Simple Switch"
+    FUNCTION = "switch"
+    RETURN_TYPES = (LATENT_TYPE,)
+    RETURN_NAMES = ("output",)
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {},
+            "optional": {
+                "input01": (LATENT_TYPE,),
+                "input02": (LATENT_TYPE,),
+                "input03": (LATENT_TYPE,),
+                "input04": (LATENT_TYPE,),
+                "input05": (LATENT_TYPE,),
+                "input06": (LATENT_TYPE,),
+            },
+        }
+
+    def switch(
+        self,
+        input01=None,
+        input02=None,
+        input03=None,
+        input04=None,
+        input05=None,
+        input06=None,
+    ):
+        for candidate in (input01, input02, input03, input04, input05, input06):
+            if not _is_none(candidate) and _is_latent(candidate):
+                return (candidate,)
+
         return (None,)
 
 

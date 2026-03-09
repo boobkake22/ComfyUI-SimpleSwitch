@@ -1,12 +1,14 @@
-from .simple_switch import SimpleAudioLatentSwitch, SimpleSwitch
+from .simple_switch import SimpleAudioLatentSwitch, SimpleLatentSwitch, SimpleSwitch
 
 NODE_CLASS_MAPPINGS = {
     "SimpleSwitch": SimpleSwitch,
+    "SimpleLatentSwitch": SimpleLatentSwitch,
     "SimpleAudioLatentSwitch": SimpleAudioLatentSwitch,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "SimpleSwitch": "Simple Switch (6 Inputs)",
+    "SimpleLatentSwitch": "Simple Latent Switch (6 Inputs)",
     "SimpleAudioLatentSwitch": "Simple Audio Latent Switch (6 Inputs)",
 }
 
