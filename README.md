@@ -9,10 +9,15 @@ ComfyUI custom nodes for returning the first available value from six optional i
   - Returns the first non-empty input in order
   - Preserves original behavior for empty model/clip context dictionaries
   - Uses wildcard typing so it can pass through most ComfyUI value types
+  - Preserved as the original implementation behavior
 - `SimpleLatentSwitch`
   - Accepts six optional `LATENT` inputs
   - Returns the first non-empty latent in order
-  - Keeps LTX latents on a typed `LATENT` path instead of a wildcard path
+  - Useful for generic latent routing where latent subtype does not matter
+- `SimpleVideoLatentSwitch`
+  - Accepts six optional `LATENT` inputs
+  - Returns the first non-nested 5D video latent
+  - Use this for LTX video latent branches
 - `SimpleAudioLatentSwitch`
   - Accepts six optional `LATENT` inputs
   - Returns the first latent compatible with LTX audio decode
@@ -40,20 +45,20 @@ Restart ComfyUI after installing.
 
 ## Usage
 
-1. Add `SimpleSwitch` for general pass-through selection, `SimpleLatentSwitch` for LTX latent selection, or `SimpleAudioLatentSwitch` right before `LTXV Audio VAE Decode`.
+1. Add `SimpleSwitch` for general pass-through selection, `SimpleLatentSwitch` for subtype-agnostic latents, `SimpleVideoLatentSwitch` for LTX video branches, or `SimpleAudioLatentSwitch` right before `LTXV Audio VAE Decode`.
 2. Connect values to `input01` ... `input06` in your preferred priority order.
 3. Use `output` downstream.
 
 ## LTX audio note
 
 LTX video latents and LTX audio latents both use the ComfyUI `LATENT` socket type, but
-the audio decoder only accepts audio-shaped latents or nested AV latents. If you route
-an LTX latent through the generic wildcard `SimpleSwitch`, it can lose the typed latent
-path and you may only discover the mismatch at decode time.
+they are not interchangeable. The video path expects a plain 5D video latent, while the
+audio path expects a 4D audio latent or a nested AV latent. If you route LTX latents
+through the generic wildcard `SimpleSwitch`, or through a subtype-blind latent switch,
+you may only discover the mismatch much later at decode time.
 
-Use `SimpleLatentSwitch` anywhere you are switching LTX latents in general, and use
-`SimpleAudioLatentSwitch` immediately before `LTXV Audio VAE Decode` when selecting
-between LTX audio latent branches.
+Use `SimpleVideoLatentSwitch` for LTX video latent branches and `SimpleAudioLatentSwitch`
+immediately before `LTXV Audio VAE Decode` for audio latent branches.
 
 ## License
 

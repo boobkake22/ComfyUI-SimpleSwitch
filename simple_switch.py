@@ -12,20 +12,28 @@ class AnyType(str):
     def __ne__(self, _value: object) -> bool:
         return False
 
-
-ANY_TYPE = AnyType("*")
+any_type = AnyType("*")
+ANY_TYPE = any_type
 LATENT_TYPE = "LATENT"
 
 
-def _is_context_empty(ctx):
+def is_context_empty(ctx):
     return not ctx or all(v is None for v in ctx.values())
 
 
-def _is_none(value):
+def is_none(value):
     if value is not None:
         if isinstance(value, dict) and "model" in value and "clip" in value:
-            return _is_context_empty(value)
+            return is_context_empty(value)
     return value is None
+
+
+def _is_context_empty(ctx):
+    return is_context_empty(ctx)
+
+
+def _is_none(value):
+    return is_none(value)
 
 
 def _get_latent_samples(value):
@@ -69,6 +77,17 @@ def _is_audio_latent(value):
     return "sample_rate" in value
 
 
+def _is_video_latent(value):
+    if not isinstance(value, dict):
+        return False
+
+    samples = _get_latent_samples(value)
+    if samples is None or _is_nested_tensor(samples):
+        return False
+
+    return _get_samples_ndim(samples) == 5
+
+
 def _describe_audio_latent(value, index):
     if not isinstance(value, dict):
         return f"input{index:02d}=non-latent:{type(value).__name__}"
@@ -92,7 +111,7 @@ class SimpleSwitch:
 
     CATEGORY = "Simple Switch"
     FUNCTION = "switch"
-    RETURN_TYPES = (ANY_TYPE,)
+    RETURN_TYPES = (any_type,)
     RETURN_NAMES = ("output",)
 
     @classmethod
@@ -100,12 +119,12 @@ class SimpleSwitch:
         return {
             "required": {},
             "optional": {
-                "input01": (ANY_TYPE,),
-                "input02": (ANY_TYPE,),
-                "input03": (ANY_TYPE,),
-                "input04": (ANY_TYPE,),
-                "input05": (ANY_TYPE,),
-                "input06": (ANY_TYPE,),
+                "input01": (any_type,),
+                "input02": (any_type,),
+                "input03": (any_type,),
+                "input04": (any_type,),
+                "input05": (any_type,),
+                "input06": (any_type,),
             },
         }
 
@@ -118,10 +137,20 @@ class SimpleSwitch:
         input05=None,
         input06=None,
     ):
-        for candidate in (input01, input02, input03, input04, input05, input06):
-            if not _is_none(candidate):
-                return (candidate,)
-        return (None,)
+        any_value = None
+        if not is_none(input01):
+            any_value = input01
+        elif not is_none(input02):
+            any_value = input02
+        elif not is_none(input03):
+            any_value = input03
+        elif not is_none(input04):
+            any_value = input04
+        elif not is_none(input05):
+            any_value = input05
+        elif not is_none(input06):
+            any_value = input06
+        return (any_value,)
 
 
 class SimpleLatentSwitch:
@@ -210,6 +239,60 @@ class SimpleAudioLatentSwitch:
             raise ValueError(
                 "No compatible audio latent found. "
                 "Expected an LTX audio latent (`type='audio'`) or a nested AV latent. "
+                f"Rejected candidates: {', '.join(rejected)}"
+            )
+
+        return (None,)
+
+
+class SimpleVideoLatentSwitch:
+    """Return the first non-empty video-compatible latent from input01..input06."""
+
+    CATEGORY = "Simple Switch"
+    FUNCTION = "switch"
+    RETURN_TYPES = (LATENT_TYPE,)
+    RETURN_NAMES = ("output",)
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {},
+            "optional": {
+                "input01": (LATENT_TYPE,),
+                "input02": (LATENT_TYPE,),
+                "input03": (LATENT_TYPE,),
+                "input04": (LATENT_TYPE,),
+                "input05": (LATENT_TYPE,),
+                "input06": (LATENT_TYPE,),
+            },
+        }
+
+    def switch(
+        self,
+        input01=None,
+        input02=None,
+        input03=None,
+        input04=None,
+        input05=None,
+        input06=None,
+    ):
+        rejected = []
+        for index, candidate in enumerate(
+            (input01, input02, input03, input04, input05, input06),
+            start=1,
+        ):
+            if _is_none(candidate):
+                continue
+
+            if _is_video_latent(candidate):
+                return (candidate,)
+
+            rejected.append(_describe_audio_latent(candidate, index))
+
+        if rejected:
+            raise ValueError(
+                "No compatible video latent found. "
+                "Expected a non-nested 5D video latent. "
                 f"Rejected candidates: {', '.join(rejected)}"
             )
 
